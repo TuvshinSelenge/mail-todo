@@ -10,7 +10,7 @@ A personal, free todo app. The owner emails themselves from Gmail with lines lik
 private-by-key web page that works on Mac and phone, where it can be checked off or
 deleted.
 
-**Users:** the owner only. One Gmail account, one secret key.
+**Users:** the owner only. One Gmail account, one secret key. Extra sender addresses can be allowed via Script Property `ALLOWED_SENDERS` (comma-separated); their todos show "from <address>".
 
 **Success criteria**
 - An email from the owner to themselves with a `todo:` line shows up in the web list within 2 minutes.

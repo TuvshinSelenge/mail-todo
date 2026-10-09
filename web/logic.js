@@ -73,5 +73,9 @@
     return { open, done };
   }
 
-  return { localIso, longDate, dueInfo, relativeTime, isNew, sortTodos };
+  function sourceLabel(todo) {
+    return todo.from ? 'from ' + todo.from : 'from email';
+  }
+
+  return { localIso, longDate, dueInfo, relativeTime, isNew, sortTodos, sourceLabel };
 });

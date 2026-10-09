@@ -1,7 +1,7 @@
 // Google Sheet storage. Two tabs: "Todos" (one row per todo) and "Processed"
 // (Gmail message ids already handled). All columns are plain text.
 
-const TODO_HEADERS = ['id', 'text', 'due', 'done', 'created', 'doneAt', 'messageId'];
+const TODO_HEADERS = ['id', 'text', 'due', 'done', 'created', 'doneAt', 'messageId', 'from'];
 const PROCESSED_HEADERS = ['messageId', 'processedAt'];
 
 // Leading = + - @ would make Sheets treat the value as a formula.
@@ -40,6 +40,9 @@ function sheet_(name, headers) {
     sh.getRange('A:Z').setNumberFormat('@');
     sh.getRange(1, 1, 1, headers.length).setValues([headers]);
     sh.setFrozenRows(1);
+  } else if (sh.getRange(1, headers.length).getValue() !== headers[headers.length - 1]) {
+    // Header row from an older version with fewer columns.
+    sh.getRange(1, 1, 1, headers.length).setValues([headers]);
   }
   return sh;
 }
@@ -72,11 +75,12 @@ function rowToTodo_(r) {
     created: cellText_(r[4]),
     doneAt: cellText_(r[5]),
     messageId: cellText_(r[6]),
+    from: cellText_(r[7]),
   };
 }
 
 function todoToRow_(t) {
-  return [t.id, sheetSafe_(t.text), t.due, t.done ? 'TRUE' : 'FALSE', t.created, t.doneAt, t.messageId];
+  return [t.id, sheetSafe_(t.text), t.due, t.done ? 'TRUE' : 'FALSE', t.created, t.doneAt, t.messageId, t.from || ''];
 }
 
 function storeListTodos() {

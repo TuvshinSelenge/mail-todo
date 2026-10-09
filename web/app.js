@@ -211,7 +211,7 @@
     const meta = el('div', 'meta');
     const due = t.done ? null : L.dueInfo(t.due, todayIso);
     if (due) meta.append(el('span', `due ${due.tone}`, due.label), ' · ');
-    meta.append(t.done ? `done ${L.relativeTime(t.doneAt, now)}` : `from email · ${L.relativeTime(t.created, now)}`);
+    meta.append(t.done ? `done ${L.relativeTime(t.doneAt, now)}` : `${L.sourceLabel(t)} · ${L.relativeTime(t.created, now)}`);
     body.append(el('div', 'tx', t.text), meta);
 
     const del = el('button', 'del', '✕');

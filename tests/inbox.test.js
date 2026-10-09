@@ -9,6 +9,7 @@ function setup(processed = []) {
   let n = 0;
   const deps = {
     ownerEmail: 'Me@Example.com',
+    allowedSenders: ['friend@outlook.com'],
     isProcessed: (id) => state.processed.has(id),
     markProcessed: (id) => state.processed.add(id),
     addTodos: (rows) => state.todos.push(...rows),
@@ -32,8 +33,8 @@ test('imports todos with the full row shape', () => {
   const added = processMessages([msg('m1', 'todo: buy milk', 'todo: homework due 15.10.2026')], deps);
   assert.equal(added, 2);
   assert.deepEqual(state.todos, [
-    { id: 'id1', text: 'buy milk', due: '', done: false, created: '2026-10-09T08:00:00.000Z', doneAt: '', messageId: 'm1' },
-    { id: 'id2', text: 'homework', due: '2026-10-15', done: false, created: '2026-10-09T08:00:00.000Z', doneAt: '', messageId: 'm1' },
+    { id: 'id1', text: 'buy milk', due: '', done: false, created: '2026-10-09T08:00:00.000Z', doneAt: '', messageId: 'm1', from: '' },
+    { id: 'id2', text: 'homework', due: '2026-10-15', done: false, created: '2026-10-09T08:00:00.000Z', doneAt: '', messageId: 'm1', from: '' },
   ]);
   assert.ok(state.processed.has('m1'));
 });
@@ -97,4 +98,26 @@ const { buildQuery_ } = require('../apps-script/Inbox.js');
 test('buildQuery_ searches since the last run with a 10-minute overlap', () => {
   const lastRun = Date.UTC(2026, 9, 9, 12, 0, 0);
   assert.equal(buildQuery_(lastRun), 'from:me to:me todo after:' + (lastRun / 1000 - 600));
+});
+
+test('allowed senders are imported and tagged with their address (case-insensitive)', () => {
+  const { deps, state } = setup();
+  processMessages([msg('m1', 'todo: from friend', '', 'Friend <FRIEND@Outlook.com>')], deps);
+  assert.deepEqual(state.todos.map((t) => [t.text, t.from]), [['from friend', 'friend@outlook.com']]);
+});
+
+test('buildQuery_ includes allowed senders', () => {
+  const lastRun = Date.UTC(2026, 9, 9, 12, 0, 0);
+  assert.equal(
+    buildQuery_(lastRun, ['a@x.com', 'b@y.com']),
+    'to:me todo after:' + (lastRun / 1000 - 600) + ' {from:me from:a@x.com from:b@y.com}'
+  );
+});
+
+const { parseSenders_ } = require('../apps-script/Inbox.js');
+
+test('parseSenders_ splits, trims, lowercases and drops blanks', () => {
+  assert.deepEqual(parseSenders_(' a@x.com, B@Y.com ,, '), ['a@x.com', 'b@y.com']);
+  assert.deepEqual(parseSenders_(null), []);
+  assert.deepEqual(parseSenders_('a@x.com; b@y.com\nc@z.com'), ['a@x.com', 'b@y.com', 'c@z.com']);
 });

@@ -13,7 +13,14 @@ todo: pay rent due tomorrow
 ```
 
 Due formats: `due` / `due to` / `due:` followed by `DD.MM.YYYY`, `DD/MM/YYYY`, `DD-MM-YYYY`, `DD.MM`, `today` or `tomorrow`.
-It takes up to ~2 minutes to appear.
+It takes up to ~1–2 minutes to appear.
+
+### Other sender addresses
+
+To also accept todos sent **from other addresses to your Gmail**, open the script →
+Project Settings → Script Properties and set `ALLOWED_SENDERS` to a comma-separated list
+(e.g. `me@work.com, me@outlook.com`). Your own Gmail is always allowed. Those todos show
+"from <address>" on the page.
 
 ## Development
 

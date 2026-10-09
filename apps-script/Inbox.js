@@ -9,8 +9,19 @@ const QUERY_OVERLAP_MS = 10 * 60 * 1000;
 
 // Only mail since the previous run (with overlap for delivery delays), so most
 // runs find nothing and exit before opening the Sheet.
-function buildQuery_(lastRunMs) {
-  return 'from:me to:me todo after:' + Math.floor((lastRunMs - QUERY_OVERLAP_MS) / 1000);
+function buildQuery_(lastRunMs, senders) {
+  const after = 'after:' + Math.floor((lastRunMs - QUERY_OVERLAP_MS) / 1000);
+  if (!senders || !senders.length) return 'from:me to:me todo ' + after;
+  return 'to:me todo ' + after + ' {from:me ' + senders.map((a) => 'from:' + a).join(' ') + '}';
+}
+
+// Script Property ALLOWED_SENDERS: extra addresses (besides the owner) whose
+// mail to the owner is imported. Separated by commas, semicolons or newlines.
+function parseSenders_(value) {
+  return String(value || '')
+    .split(/[,;\n]/)
+    .map((a) => a.trim().toLowerCase())
+    .filter(Boolean);
 }
 
 function extractEmail(from) {
@@ -23,7 +34,9 @@ function processMessages(messages, deps) {
   messages.forEach((msg) => {
     if (deps.isProcessed(msg.id)) return;
     try {
-      if (extractEmail(msg.from) !== deps.ownerEmail.toLowerCase()) {
+      const sender = extractEmail(msg.from);
+      const isOwner = sender === deps.ownerEmail.toLowerCase();
+      if (!isOwner && deps.allowedSenders.indexOf(sender) === -1) {
         deps.markProcessed(msg.id);
         return;
       }
@@ -37,6 +50,7 @@ function processMessages(messages, deps) {
         created: created,
         doneAt: '',
         messageId: msg.id,
+        from: isOwner ? '' : sender,
       })));
       deps.markProcessed(msg.id);
       deps.failures.clear(msg.id);
@@ -59,8 +73,9 @@ function checkInbox() {
     const props = PropertiesService.getScriptProperties();
     const startedAt = Date.now();
     const lastRun = Number(props.getProperty('LAST_RUN_MS')) || startedAt - FIRST_RUN_LOOKBACK_MS;
-    const threads = GmailApp.search(buildQuery_(lastRun), 0, 50);
-    if (threads.length) importThreads_(threads, props);
+    const senders = parseSenders_(props.getProperty('ALLOWED_SENDERS'));
+    const threads = GmailApp.search(buildQuery_(lastRun, senders), 0, 50);
+    if (threads.length) importThreads_(threads, props, senders);
     // Only advance after a successful run, so a crash re-scans the same window.
     props.setProperty('LAST_RUN_MS', String(startedAt));
   } finally {
@@ -68,7 +83,7 @@ function checkInbox() {
   }
 }
 
-function importThreads_(threads, props) {
+function importThreads_(threads, props, senders) {
   const processed = storeProcessedIds();
   const messages = [];
   const touched = [];
@@ -85,6 +100,7 @@ function importThreads_(threads, props) {
   const tz = Session.getScriptTimeZone();
   processMessages(messages, {
     ownerEmail: Session.getEffectiveUser().getEmail(),
+    allowedSenders: senders,
     isProcessed: (id) => !!processed[id],
     markProcessed: (id) => { storeMarkProcessed(id); processed[id] = true; },
     addTodos: storeAddTodos,
@@ -105,4 +121,4 @@ function importThreads_(threads, props) {
   touched.forEach((thread) => thread.addLabel(label));
 }
 
-if (typeof module !== 'undefined') module.exports = { processMessages, extractEmail, buildQuery_ };
+if (typeof module !== 'undefined') module.exports = { processMessages, extractEmail, buildQuery_, parseSenders_ };

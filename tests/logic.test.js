@@ -50,3 +50,9 @@ test('longDate and localIso', () => {
   assert.equal(L.longDate(new Date(2026, 9, 9, 12)), 'Friday, October 9');
   assert.equal(L.localIso(new Date(2026, 0, 5, 12)), '2026-01-05');
 });
+
+test('sourceLabel', () => {
+  assert.equal(L.sourceLabel({ from: '' }), 'from email');
+  assert.equal(L.sourceLabel({}), 'from email');
+  assert.equal(L.sourceLabel({ from: 'friend@outlook.com' }), 'from friend@outlook.com');
+});

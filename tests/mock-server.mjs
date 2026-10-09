@@ -26,7 +26,7 @@ let todos = [
   { id: '1', text: 'Library book', due: day(-1), done: false, created: ago(60 * 30), doneAt: '', messageId: 'm1' },
   { id: '2', text: 'Buy milk', due: day(0), done: false, created: ago(2), doneAt: '', messageId: 'm2' },
   { id: '3', text: 'Homework', due: day(6), done: false, created: ago(60), doneAt: '', messageId: 'm3' },
-  { id: '4', text: 'Call mom', due: '', done: false, created: ago(60 * 26), doneAt: '', messageId: 'm4' },
+  { id: '4', text: 'Call mom', due: '', done: false, created: ago(60 * 26), doneAt: '', messageId: 'm4', from: 'friend@outlook.com' },
   { id: '5', text: '<img src=x onerror=alert(1)> should show as text', due: '', done: false, created: ago(300), doneAt: '', messageId: 'm5' },
   { id: '6', text: 'Pay rent', due: '', done: true, created: ago(60 * 48), doneAt: ago(60 * 20), messageId: 'm6' },
 ];
