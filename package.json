@@ -1,0 +1,8 @@
+{
+  "name": "mail-todo",
+  "private": true,
+  "scripts": {
+    "test": "node --test",
+    "mock": "node tests/mock-server.mjs"
+  }
+}
