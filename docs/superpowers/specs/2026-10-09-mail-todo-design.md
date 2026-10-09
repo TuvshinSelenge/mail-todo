@@ -145,7 +145,7 @@ enforced by the secret key.
 - `API_URL` is a constant in `app.js`.
 - The key lives in `localStorage` under `zan.key`. With no key, or after an `unauthorized` response, the page shows a single key-entry screen.
 - The last successful list is cached in `localStorage` under `zan.todos` and rendered instantly on load.
-- The list refreshes on load, on window focus or `visibilitychange` to visible, and every 60s while visible.
+- The list refreshes on load, on window focus or `visibilitychange` to visible, and every 15s while visible.
 - When a network failure happens, the cached list stays on screen and the status shows "Offline".
 - All `localStorage` access is wrapped in try/catch.
 - Due-date labels compare `due` with the browser's local date.

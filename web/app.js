@@ -7,7 +7,7 @@
   const API_URL = window.ZAN_API_URL || '';
   const KEY_STORE = 'zan.key';
   const CACHE_STORE = 'zan.todos';
-  const REFRESH_MS = 60 * 1000;
+  const REFRESH_MS = 15 * 1000;
   const SLASH_MS = 300;
   const STATUS_TEXT = { synced: 'Synced', syncing: 'Syncing…', offline: 'Offline' };
 
