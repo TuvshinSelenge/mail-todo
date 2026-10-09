@@ -2,7 +2,7 @@
 // Apps Script cannot set HTTP status codes, so errors are {ok:false, error}.
 // POST bodies are sent as text/plain JSON to avoid a CORS preflight.
 
-const ALLOWED_ACTIONS = { GET: ['list'], POST: ['set', 'delete'] };
+const ALLOWED_ACTIONS = { GET: ['list'], POST: ['set', 'delete', 'clearDone'] };
 
 function handleRequest(method, req, deps) {
   req = req || {};
@@ -13,6 +13,7 @@ function handleRequest(method, req, deps) {
     return { ok: false, error: 'bad_request' };
   }
   if (req.action === 'list') return { ok: true, todos: deps.list() };
+  if (req.action === 'clearDone') return { ok: true, removed: deps.clearDone() };
   if (typeof req.id !== 'string' || !req.id) return { ok: false, error: 'bad_request' };
   if (req.action === 'set' && typeof req.done !== 'boolean') return { ok: false, error: 'bad_request' };
   // "set" carries the desired state, so a repeated or reordered request cannot flip it back.
@@ -44,6 +45,7 @@ function respond_(method, req) {
       list: storeListTodos,
       setDone: (id, done) => storeSetDone(id, done, new Date().toISOString()),
       remove: storeDeleteTodo,
+      clearDone: storeClearDone,
     });
   } catch (err) {
     console.error(err);

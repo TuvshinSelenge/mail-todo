@@ -9,6 +9,7 @@ function makeDeps(overrides = {}) {
     list: () => [{ id: 'a' }],
     setDone: (id, done) => { calls.push(['set', id, done]); return id === 'a'; },
     remove: (id) => { calls.push(['delete', id]); return id === 'a'; },
+    clearDone: () => { calls.push(['clearDone']); return 3; },
     ...overrides,
   };
   return { deps, calls };
@@ -57,5 +58,18 @@ test('bad requests', () => {
   assert.deepEqual(handleRequest('GET', { key: 's3cret', action: 'set', id: 'a', done: true }, deps), bad);
   assert.deepEqual(handleRequest('POST', { key: 's3cret', action: 'list' }, deps), bad);
   assert.deepEqual(handleRequest('POST', { key: 's3cret', action: 'explode', id: 'a' }, deps), bad);
+  assert.deepEqual(calls, []);
+});
+
+test('POST clearDone removes all done todos and reports how many', () => {
+  const { deps, calls } = makeDeps();
+  assert.deepEqual(handleRequest('POST', { key: 's3cret', action: 'clearDone' }, deps), { ok: true, removed: 3 });
+  assert.deepEqual(calls, [['clearDone']]);
+});
+
+test('clearDone needs the key and POST', () => {
+  const { deps, calls } = makeDeps();
+  assert.deepEqual(handleRequest('POST', { key: 'nope', action: 'clearDone' }, deps), { ok: false, error: 'unauthorized' });
+  assert.deepEqual(handleRequest('GET', { key: 's3cret', action: 'clearDone' }, deps), { ok: false, error: 'bad_request' });
   assert.deepEqual(calls, []);
 });

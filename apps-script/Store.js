@@ -121,6 +121,25 @@ function storeDeleteTodo(id) {
   return true;
 }
 
+// Rewrites the data rows without the done ones (one write instead of a deleteRow per todo).
+function storeClearDone() {
+  const sh = todosSheet_();
+  const last = sh.getLastRow();
+  if (last < 2) return 0;
+  const range = sh.getRange(2, 1, last - 1, TODO_HEADERS.length);
+  const rows = range.getValues();
+  const keep = rows.filter((r) => r[0] !== '' && !isTrue_(r[3]));
+  const removed = rows.filter((r) => r[0] !== '').length - keep.length;
+  if (!removed) return 0;
+  range.clearContent();
+  if (keep.length) {
+    // Values come back unescaped, so re-escape text before writing it again.
+    sh.getRange(2, 1, keep.length, TODO_HEADERS.length)
+      .setValues(keep.map((r) => r.map((v, i) => (i === 1 ? sheetSafe_(readText_(String(v))) : v))));
+  }
+  return removed;
+}
+
 function storeProcessedIds() {
   const sh = processedSheet_();
   const last = sh.getLastRow();

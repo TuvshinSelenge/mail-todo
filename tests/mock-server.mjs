@@ -55,6 +55,11 @@ http.createServer(async (req, res) => {
     try { body = JSON.parse(raw); } catch { return json(res, { ok: false, error: 'bad_request' }); }
     if (body.key !== KEY) return json(res, { ok: false, error: 'unauthorized' });
     if (FAIL_WRITES) return json(res, { ok: false, error: 'server_error' });
+    if (body.action === 'clearDone') {
+      const before = todos.length;
+      todos = todos.filter((x) => !x.done);
+      return json(res, { ok: true, removed: before - todos.length });
+    }
     const t = todos.find((x) => x.id === body.id);
     if (!t) return json(res, { ok: false, error: 'not_found' });
     if (body.action === 'set' && typeof body.done === 'boolean') {

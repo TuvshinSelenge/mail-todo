@@ -27,6 +27,7 @@
     openCount: $('open-count'),
     doneCount: $('done-count'),
     doneSection: $('done-section'),
+    clearDone: $('clear-done'),
     empty: $('empty'),
     toast: $('toast'),
   };
@@ -167,6 +168,15 @@
     mutate({ action: 'delete', id }, () => todos.splice(Math.min(i, todos.length), 0, t));
   }
 
+  function clearDone() {
+    const removed = todos.filter((t) => t.done);
+    if (!removed.length) return;
+    const noun = removed.length === 1 ? 'todo' : 'todos';
+    if (!window.confirm(`Delete ${removed.length} done ${noun}?`)) return;
+    todos = todos.filter((t) => !t.done);
+    mutate({ action: 'clearDone' }, () => { todos = todos.concat(removed); });
+  }
+
   function onCheck(row, t) {
     if (row.classList.contains('slashing')) return;
     if (t.done) return toggle(t.id);
@@ -281,6 +291,7 @@
     refresh();
   });
 
+  els.clearDone.addEventListener('click', clearDone);
   document.addEventListener('touchstart', (e) => {
     if (!e.target.closest('.row.swiped')) closeSwipes(null);
   }, { passive: true });
