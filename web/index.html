@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="zan">
+  <title>zan</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0a0a'/%3E%3Cpath d='M8 24 24 8' stroke='%23ff6b1a' stroke-width='3.5' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="app" hidden>
+    <header class="top">
+      <div class="brand"><span class="mark" aria-hidden="true"></span><b>zan</b></div>
+      <div id="status" class="sync" data-state="syncing" role="status">
+        <span class="dot" aria-hidden="true"></span><span id="status-text">Syncing…</span>
+      </div>
+    </header>
+
+    <section class="title">
+      <div id="today-date" class="date"></div>
+      <h1>Today<em>.</em></h1>
+      <p id="counts"></p>
+    </section>
+
+    <section>
+      <h2 class="sec"><span>Open</span><span id="open-count">0</span></h2>
+      <ul id="open-list" class="list"></ul>
+      <p id="empty" class="empty" hidden>Nothing to do. Email yourself <code>todo: …</code> to add one.</p>
+    </section>
+
+    <section id="done-section" hidden>
+      <h2 class="sec"><span>Done</span><span id="done-count">0</span></h2>
+      <ul id="done-list" class="list"></ul>
+    </section>
+  </main>
+
+  <section id="key-screen" class="key-screen" hidden>
+    <form id="key-form">
+      <div class="brand"><span class="mark" aria-hidden="true"></span><b>zan</b></div>
+      <label for="key-input">Enter your secret key</label>
+      <input id="key-input" type="password" autocomplete="current-password" autocapitalize="off" spellcheck="false" required>
+      <p id="key-error" class="key-error" role="alert"></p>
+      <button type="submit">Unlock</button>
+    </form>
+  </section>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="config.js"></script>
+  <script src="logic.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
