@@ -2,9 +2,16 @@
 // processMessages is pure (all effects via deps) so Node can test it;
 // checkInbox wires it to Gmail, the Sheet and Script Properties.
 
-const GMAIL_QUERY = 'from:me to:me todo newer_than:2d';
 const LABEL_NAME = 'todo-saved';
 const MAX_FAILURES = 3;
+const FIRST_RUN_LOOKBACK_MS = 2 * 24 * 60 * 60 * 1000;
+const QUERY_OVERLAP_MS = 10 * 60 * 1000;
+
+// Only mail since the previous run (with overlap for delivery delays), so most
+// runs find nothing and exit before opening the Sheet.
+function buildQuery_(lastRunMs) {
+  return 'from:me to:me todo after:' + Math.floor((lastRunMs - QUERY_OVERLAP_MS) / 1000);
+}
 
 function extractEmail(from) {
   const match = /<([^>]+)>/.exec(from || '');
@@ -49,45 +56,53 @@ function checkInbox() {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(20000)) return;
   try {
-    const processed = storeProcessedIds();
-    const threads = GmailApp.search(GMAIL_QUERY, 0, 50);
-    const messages = [];
-    const touched = [];
-    threads.forEach((thread) => {
-      const fresh = thread.getMessages().filter((m) => !processed[m.getId()]);
-      if (!fresh.length) return;
-      touched.push(thread);
-      fresh.forEach((m) => {
-        messages.push({ id: m.getId(), from: m.getFrom(), subject: m.getSubject(), getBody: () => m.getPlainBody(), date: m.getDate() });
-      });
-    });
-    if (!messages.length) return;
-
-    const tz = Session.getScriptTimeZone();
     const props = PropertiesService.getScriptProperties();
-    processMessages(messages, {
-      ownerEmail: Session.getEffectiveUser().getEmail(),
-      isProcessed: (id) => !!processed[id],
-      markProcessed: (id) => { storeMarkProcessed(id); processed[id] = true; },
-      addTodos: storeAddTodos,
-      failures: {
-        inc: (id) => {
-          const n = Number(props.getProperty('fail:' + id) || 0) + 1;
-          props.setProperty('fail:' + id, String(n));
-          return n;
-        },
-        clear: (id) => props.deleteProperty('fail:' + id),
-      },
-      todayIso: (date) => Utilities.formatDate(date, tz, 'yyyy-MM-dd'),
-      newId: () => Utilities.getUuid(),
-      log: (m) => console.error(m),
-    });
-
-    const label = GmailApp.getUserLabelByName(LABEL_NAME) || GmailApp.createLabel(LABEL_NAME);
-    touched.forEach((thread) => thread.addLabel(label));
+    const startedAt = Date.now();
+    const lastRun = Number(props.getProperty('LAST_RUN_MS')) || startedAt - FIRST_RUN_LOOKBACK_MS;
+    const threads = GmailApp.search(buildQuery_(lastRun), 0, 50);
+    if (threads.length) importThreads_(threads, props);
+    // Only advance after a successful run, so a crash re-scans the same window.
+    props.setProperty('LAST_RUN_MS', String(startedAt));
   } finally {
     lock.releaseLock();
   }
 }
 
-if (typeof module !== 'undefined') module.exports = { processMessages, extractEmail };
+function importThreads_(threads, props) {
+  const processed = storeProcessedIds();
+  const messages = [];
+  const touched = [];
+  threads.forEach((thread) => {
+    const fresh = thread.getMessages().filter((m) => !processed[m.getId()]);
+    if (!fresh.length) return;
+    touched.push(thread);
+    fresh.forEach((m) => {
+      messages.push({ id: m.getId(), from: m.getFrom(), subject: m.getSubject(), getBody: () => m.getPlainBody(), date: m.getDate() });
+    });
+  });
+  if (!messages.length) return;
+
+  const tz = Session.getScriptTimeZone();
+  processMessages(messages, {
+    ownerEmail: Session.getEffectiveUser().getEmail(),
+    isProcessed: (id) => !!processed[id],
+    markProcessed: (id) => { storeMarkProcessed(id); processed[id] = true; },
+    addTodos: storeAddTodos,
+    failures: {
+      inc: (id) => {
+        const n = Number(props.getProperty('fail:' + id) || 0) + 1;
+        props.setProperty('fail:' + id, String(n));
+        return n;
+      },
+      clear: (id) => props.deleteProperty('fail:' + id),
+    },
+    todayIso: (date) => Utilities.formatDate(date, tz, 'yyyy-MM-dd'),
+    newId: () => Utilities.getUuid(),
+    log: (m) => console.error(m),
+  });
+
+  const label = GmailApp.getUserLabelByName(LABEL_NAME) || GmailApp.createLabel(LABEL_NAME);
+  touched.forEach((thread) => thread.addLabel(label));
+}
+
+if (typeof module !== 'undefined') module.exports = { processMessages, extractEmail, buildQuery_ };

@@ -147,6 +147,7 @@
       showToast('Couldn’t sync, try again');
     } finally {
       pending--;
+      version++; // a refresh that started while this was in flight may hold stale data
     }
   }
 
@@ -156,7 +157,7 @@
     const prev = { done: t.done, doneAt: t.doneAt };
     t.done = !t.done;
     t.doneAt = t.done ? new Date().toISOString() : '';
-    mutate({ action: 'toggle', id }, () => Object.assign(t, prev));
+    mutate({ action: 'set', id, done: t.done }, () => Object.assign(t, prev));
   }
 
   function remove(id) {

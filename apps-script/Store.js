@@ -9,6 +9,23 @@ function sheetSafe_(text) {
   return /^[=+\-@]/.test(text) ? "'" + text : text;
 }
 
+// Strips the escape added by sheetSafe_, in case Sheets kept it as a literal character.
+function readText_(text) {
+  return /^'[=+\-@]/.test(text) ? text.slice(1) : text;
+}
+
+// Appends rows below the last row, growing the grid when it is full, and
+// formats the written range as plain text so ids and dates are not coerced.
+function appendRows_(sh, rows) {
+  if (!rows.length) return;
+  const start = sh.getLastRow() + 1;
+  const missing = start + rows.length - 1 - sh.getMaxRows();
+  if (missing > 0) sh.insertRowsAfter(sh.getMaxRows(), missing);
+  const range = sh.getRange(start, 1, rows.length, rows[0].length);
+  range.setNumberFormat('@');
+  range.setValues(rows);
+}
+
 function spreadsheet_() {
   const id = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
   if (!id) throw new Error('SHEET_ID not set: run setup()');
@@ -49,7 +66,7 @@ function isTrue_(v) {
 function rowToTodo_(r) {
   return {
     id: cellText_(r[0]),
-    text: cellText_(r[1]),
+    text: readText_(cellText_(r[1])),
     due: cellText_(r[2], true),
     done: isTrue_(r[3]),
     created: cellText_(r[4]),
@@ -73,8 +90,7 @@ function storeListTodos() {
 
 function storeAddTodos(todos) {
   if (!todos.length) return;
-  const sh = todosSheet_();
-  sh.getRange(sh.getLastRow() + 1, 1, todos.length, TODO_HEADERS.length).setValues(todos.map(todoToRow_));
+  appendRows_(todosSheet_(), todos.map(todoToRow_));
 }
 
 function findTodoRow_(sh, id) {
@@ -87,11 +103,11 @@ function findTodoRow_(sh, id) {
   return -1;
 }
 
-function storeToggleTodo(id, nowIso) {
+function storeSetDone(id, done, nowIso) {
   const sh = todosSheet_();
   const row = findTodoRow_(sh, id);
   if (row < 0) return false;
-  const done = !isTrue_(sh.getRange(row, 4).getValue());
+  if (isTrue_(sh.getRange(row, 4).getValue()) === done) return true;
   sh.getRange(row, 4).setValue(done ? 'TRUE' : 'FALSE');
   sh.getRange(row, 6).setValue(done ? nowIso : '');
   return true;
@@ -115,7 +131,7 @@ function storeProcessedIds() {
 }
 
 function storeMarkProcessed(id) {
-  processedSheet_().appendRow([id, new Date().toISOString()]);
+  appendRows_(processedSheet_(), [[id, new Date().toISOString()]]);
 }
 
-if (typeof module !== 'undefined') module.exports = { sheetSafe_ };
+if (typeof module !== 'undefined') module.exports = { sheetSafe_, readText_, appendRows_ };

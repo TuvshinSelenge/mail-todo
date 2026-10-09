@@ -91,3 +91,10 @@ test('extractEmail handles display names and case', () => {
   assert.equal(extractEmail('me@example.com'), 'me@example.com');
   assert.equal(extractEmail(''), '');
 });
+
+const { buildQuery_ } = require('../apps-script/Inbox.js');
+
+test('buildQuery_ searches since the last run with a 10-minute overlap', () => {
+  const lastRun = Date.UTC(2026, 9, 9, 12, 0, 0);
+  assert.equal(buildQuery_(lastRun), 'from:me to:me todo after:' + (lastRun / 1000 - 600));
+});

@@ -7,7 +7,7 @@ function makeDeps(overrides = {}) {
   const deps = {
     secret: 's3cret',
     list: () => [{ id: 'a' }],
-    toggle: (id) => { calls.push(['toggle', id]); return id === 'a'; },
+    setDone: (id, done) => { calls.push(['set', id, done]); return id === 'a'; },
     remove: (id) => { calls.push(['delete', id]); return id === 'a'; },
     ...overrides,
   };
@@ -34,23 +34,27 @@ test('unauthorized is checked before bad_request', () => {
   assert.deepEqual(handleRequest('POST', { key: 'nope', action: 'explode' }, deps), { ok: false, error: 'unauthorized' });
 });
 
-test('POST toggle and delete', () => {
+test('POST set (idempotent, explicit state) and delete', () => {
   const { deps, calls } = makeDeps();
-  assert.deepEqual(handleRequest('POST', { key: 's3cret', action: 'toggle', id: 'a' }, deps), { ok: true });
+  assert.deepEqual(handleRequest('POST', { key: 's3cret', action: 'set', id: 'a', done: true }, deps), { ok: true });
+  assert.deepEqual(handleRequest('POST', { key: 's3cret', action: 'set', id: 'a', done: false }, deps), { ok: true });
   assert.deepEqual(handleRequest('POST', { key: 's3cret', action: 'delete', id: 'a' }, deps), { ok: true });
-  assert.deepEqual(calls, [['toggle', 'a'], ['delete', 'a']]);
+  assert.deepEqual(calls, [['set', 'a', true], ['set', 'a', false], ['delete', 'a']]);
 });
 
 test('unknown id is not_found', () => {
   const { deps } = makeDeps();
-  assert.deepEqual(handleRequest('POST', { key: 's3cret', action: 'toggle', id: 'zzz' }, deps), { ok: false, error: 'not_found' });
+  assert.deepEqual(handleRequest('POST', { key: 's3cret', action: 'set', id: 'zzz', done: true }, deps), { ok: false, error: 'not_found' });
 });
 
 test('bad requests', () => {
   const { deps, calls } = makeDeps();
   const bad = { ok: false, error: 'bad_request' };
-  assert.deepEqual(handleRequest('POST', { key: 's3cret', action: 'toggle' }, deps), bad);
-  assert.deepEqual(handleRequest('GET', { key: 's3cret', action: 'toggle', id: 'a' }, deps), bad);
+  assert.deepEqual(handleRequest('POST', { key: 's3cret', action: 'set', done: true }, deps), bad);
+  assert.deepEqual(handleRequest('POST', { key: 's3cret', action: 'set', id: 'a' }, deps), bad);
+  assert.deepEqual(handleRequest('POST', { key: 's3cret', action: 'set', id: 'a', done: 'yes' }, deps), bad);
+  assert.deepEqual(handleRequest('POST', { key: 's3cret', action: 'toggle', id: 'a' }, deps), bad);
+  assert.deepEqual(handleRequest('GET', { key: 's3cret', action: 'set', id: 'a', done: true }, deps), bad);
   assert.deepEqual(handleRequest('POST', { key: 's3cret', action: 'list' }, deps), bad);
   assert.deepEqual(handleRequest('POST', { key: 's3cret', action: 'explode', id: 'a' }, deps), bad);
   assert.deepEqual(calls, []);

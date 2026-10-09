@@ -2,7 +2,7 @@
 // Apps Script cannot set HTTP status codes, so errors are {ok:false, error}.
 // POST bodies are sent as text/plain JSON to avoid a CORS preflight.
 
-const ALLOWED_ACTIONS = { GET: ['list'], POST: ['toggle', 'delete'] };
+const ALLOWED_ACTIONS = { GET: ['list'], POST: ['set', 'delete'] };
 
 function handleRequest(method, req, deps) {
   req = req || {};
@@ -14,7 +14,9 @@ function handleRequest(method, req, deps) {
   }
   if (req.action === 'list') return { ok: true, todos: deps.list() };
   if (typeof req.id !== 'string' || !req.id) return { ok: false, error: 'bad_request' };
-  const found = req.action === 'toggle' ? deps.toggle(req.id) : deps.remove(req.id);
+  if (req.action === 'set' && typeof req.done !== 'boolean') return { ok: false, error: 'bad_request' };
+  // "set" carries the desired state, so a repeated or reordered request cannot flip it back.
+  const found = req.action === 'set' ? deps.setDone(req.id, req.done) : deps.remove(req.id);
   return found ? { ok: true } : { ok: false, error: 'not_found' };
 }
 
@@ -40,7 +42,7 @@ function respond_(method, req) {
     result = handleRequest(method, req, {
       secret: PropertiesService.getScriptProperties().getProperty('SECRET_KEY') || '',
       list: storeListTodos,
-      toggle: (id) => storeToggleTodo(id, new Date().toISOString()),
+      setDone: (id, done) => storeSetDone(id, done, new Date().toISOString()),
       remove: storeDeleteTodo,
     });
   } catch (err) {

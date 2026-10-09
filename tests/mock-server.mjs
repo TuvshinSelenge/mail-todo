@@ -1,5 +1,6 @@
 // Serves web/ plus a fake API at /api so the UI can be checked locally.
-// Env: PORT (8787), MOCK_DELAY_MS (0), MOCK_FAIL_WRITES=1 (writes return server_error).
+// Env: PORT (8787), MOCK_DELAY_MS (0, both methods), MOCK_GET_DELAY_MS / MOCK_POST_DELAY_MS (override per method),
+// MOCK_FAIL_WRITES=1 (writes return server_error).
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
@@ -8,6 +9,8 @@ import { fileURLToPath } from 'node:url';
 const WEB = fileURLToPath(new URL('../web/', import.meta.url));
 const PORT = Number(process.env.PORT || 8787);
 const DELAY = Number(process.env.MOCK_DELAY_MS || 0);
+const GET_DELAY = Number(process.env.MOCK_GET_DELAY_MS || DELAY);
+const POST_DELAY = Number(process.env.MOCK_POST_DELAY_MS || DELAY);
 const FAIL_WRITES = process.env.MOCK_FAIL_WRITES === '1';
 const KEY = 'test';
 const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript' };
@@ -38,11 +41,14 @@ http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
 
   if (url.pathname === '/api') {
-    await sleep(DELAY);
     if (req.method === 'GET') {
+      // Snapshot before the delay, like a real read that happens before a concurrent write lands.
+      const snapshot = JSON.parse(JSON.stringify(todos));
+      await sleep(GET_DELAY);
       if (url.searchParams.get('key') !== KEY) return json(res, { ok: false, error: 'unauthorized' });
-      return json(res, { ok: true, todos });
+      return json(res, { ok: true, todos: snapshot });
     }
+    await sleep(POST_DELAY);
     let raw = '';
     for await (const chunk of req) raw += chunk;
     let body;
@@ -51,9 +57,9 @@ http.createServer(async (req, res) => {
     if (FAIL_WRITES) return json(res, { ok: false, error: 'server_error' });
     const t = todos.find((x) => x.id === body.id);
     if (!t) return json(res, { ok: false, error: 'not_found' });
-    if (body.action === 'toggle') {
-      t.done = !t.done;
-      t.doneAt = t.done ? new Date().toISOString() : '';
+    if (body.action === 'set' && typeof body.done === 'boolean') {
+      if (t.done !== body.done) t.doneAt = body.done ? new Date().toISOString() : '';
+      t.done = body.done;
     } else if (body.action === 'delete') {
       todos = todos.filter((x) => x !== t);
     } else {
